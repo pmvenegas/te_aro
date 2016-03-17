@@ -75,6 +75,13 @@ module TeAro
 
       return unless file_p.call(tracepoint.path)
 
+      event, path, line, method_id, classname, object_id, depth, subject = destructure(tracepoint)
+
+      calls << [event, path, line, method_id, classname, object_id, depth]
+      annotate(@accumulator, subject)
+    end
+
+    def destructure(tracepoint)
       event     = tracepoint.event
       path      = tracepoint.path
       line      = tracepoint.lineno
@@ -83,10 +90,9 @@ module TeAro
 
       subject = tracepoint.self
       object_id = subject.object_id
-
       depth = caller.size
-      calls << [event, path, line, method_id, classname, object_id, depth]
-      annotate(@accumulator, subject)
+
+      [event, path, line, method_id, classname, object_id, depth, subject]
     end
 
     def annotate(accumulator, object)
