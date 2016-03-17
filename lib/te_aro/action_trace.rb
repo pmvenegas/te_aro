@@ -6,6 +6,7 @@ module TeAro
       @blacklist = []
       @whitelist = []
       @logger = logger
+      @hooks = [method(:standard_hook)]
     end
 
     def register_whitelist(patterns)
@@ -25,12 +26,11 @@ module TeAro
     def start
       @calls = []
       @accumulator = { initial: {}, current: {} }
-      @file_p =  -> (path) {
-        @whitelist.any? { |entry| path.match(entry)} || @blacklist.none? { |entry| path.match(entry) }
-      }
 
       @tracepoint = TracePoint.new(:call, :return) do |trace|
-        extract(trace, @calls) if @file_p.call(trace.path)
+        @hooks.each do |hook|
+          hook.call(trace)
+        end
       end
 
       @tracepoint.enable
@@ -68,7 +68,13 @@ module TeAro
 
     private
 
-    def extract(tracepoint, calls)
+    def standard_hook(tracepoint)
+      file_p =  -> (path) {
+        @whitelist.any? { |entry| path.match(entry)} || @blacklist.none? { |entry| path.match(entry) }
+      }
+
+      return unless file_p.call(tracepoint.path)
+
       event         = tracepoint.event
       path          = tracepoint.path
       line          = tracepoint.lineno
