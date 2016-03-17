@@ -7,7 +7,7 @@ Designed to help with understanding how a particular block of code changes your 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'active_record_observer'
+gem 'te_aro'
 ```
 
 And then execute:
@@ -16,20 +16,33 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install active_record_observer
+    $ gem install te_aro
 
 ## Usage
 
 ```
 # With defaults:
-ActiveRecord::Observer::Watcher.new.observe { @some_ar_object.do_something_that_triggers_callbacks }
+TeAro::Observer.new.observe { @some_ar_object.do_something_that_triggers_callbacks }
 
 # With the tracer disabled:
-ActiveRecord::Observer::Watcher.new(:tracer => false).observe { @some_ar_object.do_something_that_triggers_callbacks }
+TeAro::Observer.new(:tracer => false).observe { @some_ar_object.do_something_that_triggers_callbacks }
 ```
 
 To disable the tracker, pass the option `:tracker => false`
 To disable the tracer, pass the option `:tracer => false`
+
+By default, output is logged to `log/te_aro.log`. This can be changed by passing a `Logger` instance when constructing the observer.
+
+
+### Options
+
+Options are passed as a hash to `Observer.new`.
+
+The following options are available:
+
+* `:tracer` Show the ActiveRecord callbacks that were called. A falsey value will turn this off.
+* `:tracker` Show ActiveRecord objects that have been created or changed. A falsey value will turn this off.
+* `:logger` Sets the logger used to record output.
 
 ## Development
 
@@ -39,10 +52,8 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/ajesler/active_record_observer.
-
+Bug reports and pull requests are welcome on GitHub at https://github.com/powershop/te_aro.
 
 ## License
 
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-

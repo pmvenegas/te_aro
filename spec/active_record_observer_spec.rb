@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe ActiveRecord::Observer::ObjectTracker do
+describe TeAro::ObjectTracker do
   it "is expected to throw an error if 'before' is called twice" do
     expect {
       tracker = ActiveRecord::Observer::ObjectTracker.new
