@@ -7,8 +7,9 @@ module ActiveRecord
     class Watcher
       def initialize(options = {})
         @options = options
-        @object_tracker = ObjectTracker.new if tracker?
-        @action_tracer = ActionTrace.new if tracer?
+        @logger = @options.fetch(:logger, nil) || create_logger
+        @object_tracker = ObjectTracker.new(@logger) if tracker?
+        @action_tracer = ActionTrace.new(@logger) if tracer?
       end
 
       def observe(&block)
@@ -34,6 +35,14 @@ module ActiveRecord
 
       def tracer?
         @options.fetch(:tracer, true)
+      end
+
+      def create_logger
+        logger = Logger.new('log/active_record_observer.log')
+        logger.formatter = proc do |severity, datetime, progname, msg|
+          "#{msg}\n"
+        end
+        logger
       end
     end
   end

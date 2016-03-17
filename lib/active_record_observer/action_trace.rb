@@ -3,8 +3,9 @@ module ActiveRecord
     class ActionTrace
       attr_reader :accumulator, :calls
 
-      def initialize
+      def initialize(logger)
         @blacklist = %w(gems ruby marginalia)
+        @logger = logger
       end
 
       def start
@@ -38,7 +39,7 @@ module ActiveRecord
       def print_trace
         calls.each do |event, file, _, id, classname, object_id, depth|
           sigil = event == 'call' ? '->' : '<-'
-          puts "#{'.'*depth}#{sigil}#{classname}:#{object_id}:#{id} from #{file}"
+          @logger.info "#{'.'*depth}#{sigil}#{classname}:#{object_id}:#{id} from #{file}"
         end
         nil
       end
@@ -50,11 +51,11 @@ module ActiveRecord
         initials.keys.each do |object_id|
           if currents[object_id].present?
             if initials[object_id] != currents[object_id]
-              puts "CHANGE: #{object_id} ======"
-              puts initials[object_id]
-              puts "------ ------ ------ ------"
-              puts currents[object_id]
-              puts "====== ====== ====== ======"
+              @logger.info "CHANGE: #{object_id} ======"
+              @logger.info initials[object_id]
+              @logger.info "------ ------ ------ ------"
+              @logger.info currents[object_id]
+              @logger.info "====== ====== ====== ======"
             end
           end
         end

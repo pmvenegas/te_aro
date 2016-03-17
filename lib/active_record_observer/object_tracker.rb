@@ -1,7 +1,8 @@
 module ActiveRecord
   module Observer
     class ObjectTracker
-      def initialize
+      def initialize(logger)
+        @logger = logger
         @before_called = false
         @after_called = false
       end
@@ -24,27 +25,27 @@ module ActiveRecord
       end
 
       def print_changes
-        puts "Object Count Changes:"
+        @logger.info "Object Count Changes:"
         @change_counts.each do |klass_name, delta|
           next if delta == 0
-          puts "\t#{klass_name}: #{'+' if delta > 0}#{delta}"
+          @logger.info "\t#{klass_name}: #{'+' if delta > 0}#{delta}"
         end
 
-        puts "New ActiveRecord objects:" if @new_instances.size > 0
+        @logger.info "New ActiveRecord objects:" if @new_instances.size > 0
         @new_instances.each do |obj|
-          puts "\t#{obj.class.name} (id=#{obj.id})"
+          @logger.info "\t#{obj.class.name} (id=#{obj.id})"
           obj.attributes.reject { |k,v| v.nil? }.each do |key, value|
             value = "nil" if value.nil?
-            puts "\t\t#{key}: #{value}"
+            @logger.info "\t\t#{key}: #{value}"
           end
         end
 
-        puts "Changed ActiveRecord objects:" if @new_instances.size > 0
+        @logger.info "Changed ActiveRecord objects:" if @new_instances.size > 0
         @changed_instances.each do |obj|
-          puts "\t#{obj.class.name} (id=#{obj.id})"
+          @logger.info "\t#{obj.class.name} (id=#{obj.id})"
           obj.changes.each do |var_name, (old_val, new_val)|
             old_val = "nil" if old_val.nil?
-            puts "\t\t#{var_name}: #{old_val} -> #{new_val}"
+            @logger.info "\t\t#{var_name}: #{old_val} -> #{new_val}"
           end
         end
       end
