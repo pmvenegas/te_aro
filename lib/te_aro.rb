@@ -8,7 +8,7 @@ module TeAro
       @options = options
       @logger = @options.fetch(:logger, nil) || create_logger
       @object_tracker = ObjectTracker.new(@logger) if tracker?
-      @action_tracer = ActionTrace.new(@logger) if tracer?
+      @action_tracer = ActionTrace.for_active_record(@logger) if tracer?
     end
 
     def observe(&block)

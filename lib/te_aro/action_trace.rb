@@ -3,14 +3,31 @@ module TeAro
     attr_reader :accumulator, :calls
 
     def initialize(logger)
-      @blacklist = %w(gems ruby marginalia)
+      @blacklist = []
+      @whitelist = []
       @logger = logger
+    end
+
+    def register_whitelist(patterns)
+      @whitelist.concat(patterns)
+    end
+
+    def register_blacklist(patterns)
+      @blacklist.concat(patterns)
+    end
+
+    def self.for_active_record(logger)
+      instance = new(logger)
+      instance.register_blacklist(%w(gems ruby marginalia))
+      instance
     end
 
     def start
       @calls = []
       @accumulator = { initial: {}, current: {} }
-      @file_p =  -> (path) { @blacklist.none? { |entry| path.match(entry) } }
+      @file_p =  -> (path) {
+        @whitelist.any? { |entry| path.match(entry)} || @blacklist.none? { |entry| path.match(entry) }
+      }
 
       @tracepoint = TracePoint.new(:call, :return) do |trace|
         extract(trace, @calls) if @file_p.call(trace.path)
