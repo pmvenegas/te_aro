@@ -75,17 +75,17 @@ module TeAro
 
       return unless file_p.call(tracepoint.path)
 
-      event         = tracepoint.event
-      path          = tracepoint.path
-      line          = tracepoint.lineno
-      method_id     = tracepoint.method_id
-      defined_class = tracepoint.defined_class
+      event     = tracepoint.event
+      path      = tracepoint.path
+      line      = tracepoint.lineno
+      method_id = tracepoint.method_id
+      classname = tracepoint.defined_class.name
 
       subject = tracepoint.self
       object_id = subject.object_id
 
       depth = caller.size
-      calls << [event, path, line, method_id, defined_class, object_id, depth]
+      calls << [event, path, line, method_id, classname, object_id, depth]
       annotate(@accumulator, subject)
     end
 
