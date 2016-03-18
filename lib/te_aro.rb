@@ -4,6 +4,7 @@ require "te_aro/action_trace"
 
 module TeAro
   class Observer
+    attr_accessor :object_tracker, :action_tracer
     def initialize(options = {})
       @options = options
       @logger = @options.fetch(:logger, nil) || create_logger
