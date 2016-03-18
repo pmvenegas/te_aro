@@ -17,9 +17,14 @@ module TeAro
       @blacklist.concat(patterns)
     end
 
+    def register_hook(hook)
+      @hooks << hook
+    end
+
     def self.for_active_record(logger)
       instance = new(logger)
       instance.register_blacklist(%w(gems ruby marginalia))
+      instance.register_hook(instance.method(:ar_hook))
       instance
     end
 
@@ -79,6 +84,19 @@ module TeAro
 
       calls << [event, path, line, method_id, classname, object_id, depth]
       annotate(@accumulator, subject)
+    end
+
+    def ar_hook(tracepoint)
+      @ar_hook_observables ||= []
+      registered_methods = [:create, :create!, :save, :save!]
+
+      return unless tracepoint.path.match('active_record')
+
+      event, path, line, method_id, classname, object_id, depth, subject = destructure(tracepoint)
+      return unless subject.is_a?(ActiveRecord::Base) && registered_methods.include?(method_id)
+
+      calls << (call = [event, path, line, method_id, classname, object_id, depth])
+      @ar_hook_observables << [subject, call]
     end
 
     def destructure(tracepoint)
