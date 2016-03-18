@@ -20,18 +20,26 @@ Or install it yourself as:
 
 ## Usage
 
-```
+```ruby
 # With defaults:
 TeAro::Observer.new.observe { @some_ar_object.do_something_that_triggers_callbacks }
 
 # With the tracer disabled:
 TeAro::Observer.new(:tracer => false).observe { @some_ar_object.do_something_that_triggers_callbacks }
+
+# Can also use the Kernel#aro method to do
+aro { @some_ar_object.do_something }
 ```
 
-To disable the tracker, pass the option `:tracker => false`
-To disable the tracer, pass the option `:tracer => false`
+
+### Output
 
 By default, output is logged to `log/te_aro.log`. This can be changed by passing a `Logger` instance when constructing the observer.
+
+Eg to log to STDOUT
+```ruby
+TeAro::Observer.new(:logger = Logger.new(STDOUT)).observe { some_ar_object.do_something }
+```
 
 
 ### Options
