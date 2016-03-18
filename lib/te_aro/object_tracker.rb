@@ -118,7 +118,7 @@ module TeAro
     def object_count_delta(before, after)
       deltas = {}
       after.keys.each do |k|
-        delta = after[k] - (before[k] || [])
+        delta = after[k] - (before[k] || 0)
         deltas[k] = delta
       end
       before.keys.each do |key|
