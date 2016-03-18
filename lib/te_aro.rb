@@ -45,3 +45,9 @@ module TeAro
     end
   end
 end
+
+module Kernel
+  def aro(&block)
+    TeAro::Observer.new.observe { block.call }
+  end
+end

@@ -1,5 +1,7 @@
 module TeAro
   class ObjectTracker
+    attr_accessor :ar_before, :ar_after, :changes_persisted
+
     def initialize(logger)
       @logger = logger
       @before_called = false
@@ -34,19 +36,49 @@ module TeAro
       @new_instances.each do |obj|
         @logger.info "\t#{obj.class.name} (id=#{obj.id})"
         obj.attributes.reject { |k,v| v.nil? }.each do |key, value|
-          value = "nil" if value.nil?
-          @logger.info "\t\t#{key}: #{value}"
+          @logger.info "\t\t#{key}: #{value_or_nil(value)}"
         end
       end
 
-      @logger.info "Changed ActiveRecord objects:" if @new_instances.size > 0
-      @changed_instances.each do |obj|
-        @logger.info "\t#{obj.class.name} (id=#{obj.id})"
-        obj.changes.each do |var_name, (old_val, new_val)|
-          old_val = "nil" if old_val.nil?
-          @logger.info "\t\t#{var_name}: #{old_val} -> #{new_val}"
+      # Might still be useful later; commenting out for now
+      # @logger.info "Changed ActiveRecord objects:" if @changed_instances.size > 0
+      # @changed_instances.each do |obj|
+      #   @logger.info "\t#{obj.class.name} (id=#{obj.id})"
+      #   obj.changes.each do |var_name, (old_val, new_val)|
+      #     old_val = "nil" if old_val.nil?
+      #     @logger.info "\t\t#{var_name}: #{old_val} -> #{new_val}"
+      #   end
+      # end
+
+      @logger.info "Changed and persisted ActiveRecord objects:" if @changes_persisted.size > 0
+      @changes_persisted.each do |old, new|
+        @logger.info "\t#{old.class.name} (id=#{old.id})"
+        old.attributes.each do |var_name, old_val|
+          new_val = new[var_name]
+          @logger.info "\t\t#{var_name}: #{value_or_nil(old_val)} -> #{value_or_nil(new_val)}" if !attr_equal?(old_val, new_val)
         end
       end
+    end
+
+    def value_or_nil(value)
+      value.nil? ? "nil" : value
+    end
+
+    # practical Time comparison
+    def time_equal?(a, b)
+      a.to_i == b.to_i
+    end
+
+    def attr_equal?(a, b)
+      if a.is_a? Time
+        time_equal?(a, b)
+      else
+        a == b
+      end
+    end
+
+    def ar_equal?(a, b)
+      a.class == b.class && a.attributes.all? { |k, v| attr_equal?(v, b[k]) }
     end
 
     private
@@ -55,6 +87,13 @@ module TeAro
       @change_counts = object_count_delta(@before_count, @after_count).reject {|klass_name, delta| delta == 0 }
       @new_instances = []
       @changed_instances = []
+
+      @changes_persisted = @ar_before.map do |obj|
+        if obj.persisted?
+          reloaded = obj.class.find(obj.id)
+          [obj, reloaded] if !ar_equal?(obj, reloaded)
+        end
+      end.compact
 
       @ar_after.each do |obj|
         if obj.changed?
