@@ -48,8 +48,8 @@ Options are passed as a hash to `Observer.new`.
 
 The following options are available:
 
-* `:tracer` Show the ActiveRecord callbacks that were called. A falsey value will turn this off.
-* `:tracker` Show ActiveRecord objects that have been created or changed. A falsey value will turn this off.
+* `:tracer` Show the ActiveRecord callbacks that were called. A truthy value will turn this on, it is off by default
+* `:tracker` Show ActiveRecord objects that have been created or changed. A falsey value will turn this off. On by default.
 * `:logger` Sets the logger used to record output.
 
 ## Development

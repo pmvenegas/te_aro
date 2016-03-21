@@ -34,7 +34,7 @@ module TeAro
     end
 
     def tracer?
-      @options.fetch(:tracer, true)
+      @options.fetch(:tracer, false)
     end
 
     def create_logger
