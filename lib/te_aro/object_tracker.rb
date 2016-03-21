@@ -90,8 +90,13 @@ module TeAro
 
       @changes_persisted = @ar_before.map do |obj|
         if obj.persisted?
-          reloaded = obj.class.find(obj.id)
-          [obj, reloaded] if !ar_equal?(obj, reloaded)
+          begin
+            reloaded = obj.class.find(obj.id)
+            [obj, reloaded] if !ar_equal?(obj, reloaded)
+          rescue ActiveRecord::RecordNotFound
+            # TODO: collect and report
+            next
+          end
         end
       end.compact
 
