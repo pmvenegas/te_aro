@@ -1,6 +1,5 @@
 require 'sqlite3'
 
-# TODO: clean up and DRY
 db = SQLite3::Database.new 'test.db'
 
 db.execute <<-SQL

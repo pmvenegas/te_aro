@@ -1,6 +1,3 @@
-# TODO: remove
-require 'byebug'
-
 module TeAro
   class ActiveRecordObjectTracker
     attr_accessor :targets, :results

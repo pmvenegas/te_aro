@@ -1,4 +1,8 @@
 require 'spec_helper'
+
+require 'support/models/user'
+require 'support/models/post'
+
 require 'byebug'
 
 ENABLE_LOG = false
@@ -13,141 +17,146 @@ def maybe_log(tracker)
 end
 
 describe TeAro::ActiveRecordObjectTracker do
-  after(:each) { ObjectSpace.garbage_collect }
+  context "invocation" do
+    it 'raises an error if #start is called twice' do
+      expect {
+        tracker = TeAro::ActiveRecordObjectTracker.new
+        tracker.start
+        tracker.start
+      }.to raise_error(StandardError)
+    end
 
-  it "raises an error if 'start' is called twice" do
-    expect {
-      tracker = TeAro::ActiveRecordObjectTracker.new
-      tracker.start
-      tracker.start
-    }.to raise_error(StandardError)
+    it 'raises an error if #stop is called before #start is called' do
+      expect {
+        tracker = TeAro::ActiveRecordObjectTracker.new
+        tracker.stop
+      }.to raise_error(StandardError)
+    end
+
+    it 'raises an error if #stop is called twice' do
+      expect {
+        tracker = TeAro::ActiveRecordObjectTracker.new
+        tracker.start
+        tracker.start
+        tracker.start
+      }.to raise_error(StandardError)
+    end
   end
 
-  it "raises an error if 'stop' is called before 'start' is called" do
-    expect {
+  context "tracking" do
+    # Required for ObjectSpace introspection to work
+    after(:each) { ObjectSpace.garbage_collect }
+
+    it 'ignores objects outside of tracked code' do
       tracker = TeAro::ActiveRecordObjectTracker.new
+
+      User.new(name: 'foo', age: 31)
+      User.new(name: 'bar', age: 31)
+      User.new(name: 'baz', age: 31)
+
+      tracker.start
       tracker.stop
-    }.to raise_error(StandardError)
-  end
 
-  it "raises an error if 'stop' is called twice" do
-    expect {
+      maybe_log(tracker)
+
+      expect(tracker.results[:new]).to be_empty
+    end
+
+    it 'tracks new unpersisted records' do
       tracker = TeAro::ActiveRecordObjectTracker.new
       tracker.start
+      user = User.new(name: 'foo', age: 31)
+      tracker.stop
+
+      maybe_log(tracker)
+
+      expect(tracker.results[:new]).to contain_exactly(user)
+    end
+
+    it 'tracks created objects' do
+      tracker = TeAro::ActiveRecordObjectTracker.new
       tracker.start
+      user = User.create(name: 'foo', age: 31)
+      tracker.stop
+
+      maybe_log(tracker)
+
+      expect(tracker.results[:created]).to contain_exactly(user)
+    end
+
+    it 'tracks changed objects' do
+      tracker = TeAro::ActiveRecordObjectTracker.new
+      user = User.first
       tracker.start
-    }.to raise_error(StandardError)
-  end
+      user.age = user.age + 1
+      tracker.stop
 
-  it "ignores objects outside of tracked code" do
-    tracker = TeAro::ActiveRecordObjectTracker.new
+      maybe_log(tracker)
 
-    User.new(name: 'foo', age: 31)
-    User.new(name: 'bar', age: 31)
-    User.new(name: 'baz', age: 31)
+      expect(tracker.results[:changed]).to contain_exactly(user)
+    end
 
-    tracker.start
-    tracker.stop
+    it 'tracks updated objects' do
+      tracker = TeAro::ActiveRecordObjectTracker.new
+      tracker.start
+      user = User.first
+      user.update(age: 32)
+      tracker.stop
 
-    maybe_log(tracker)
+      maybe_log(tracker)
 
-    expect(tracker.results[:new]).to be_empty
-  end
+      expect(tracker.results[:updated]).to contain_exactly(user)
+    end
 
-  it "tracks new unpersisted records" do
-    tracker = TeAro::ActiveRecordObjectTracker.new
-    tracker.start
-    user = User.new(name: 'foo', age: 31)
-    tracker.stop
+    it 'tracks detailed object updates made within tracking window' do
+      tracker = TeAro::ActiveRecordObjectTracker.new
+      user = User.first
+      tracker.start
+      user.update(age: 33)
+      tracker.stop
 
-    maybe_log(tracker)
+      maybe_log(tracker)
 
-    expect(tracker.results[:new]).to contain_exactly(user)
-  end
+      expect(tracker.results[:object_updates].first).to include(user)
+    end
 
-  it "tracks created objects" do
-    tracker = TeAro::ActiveRecordObjectTracker.new
-    tracker.start
-    user = User.create(name: 'foo', age: 31)
-    tracker.stop
+    it 'tracks deleted objects' do
+      tracker = TeAro::ActiveRecordObjectTracker.new
+      tracker.start
+      # user = User.create(name: 'foo', age: 31)
+      user = User.last
+      user.destroy
+      tracker.stop
 
-    maybe_log(tracker)
+      maybe_log(tracker)
 
-    expect(tracker.results[:created]).to contain_exactly(user)
-  end
+      expect(tracker.results[:deleted]).to contain_exactly user
+    end
 
-  it "tracks changed objects" do
-    tracker = TeAro::ActiveRecordObjectTracker.new
-    user = User.first
-    tracker.start
-    user.age = user.age + 1
-    tracker.stop
+    it 'only tracks given targets' do
+      tracker = TeAro::ActiveRecordObjectTracker.new([User])
 
-    maybe_log(tracker)
+      tracker.start
+      user = User.new(name: 'foo', age: 31)
+      post = Post.new(content: 'some text', user: user)
+      tracker.stop
 
-    expect(tracker.results[:changed]).to contain_exactly(user)
-  end
+      maybe_log(tracker)
 
-  it "tracks updated objects" do
-    tracker = TeAro::ActiveRecordObjectTracker.new
-    tracker.start
-    user = User.first
-    user.update(age: 32)
-    tracker.stop
+      expect(tracker.results[:new]).to contain_exactly(user)
+    end
 
-    maybe_log(tracker)
+    it 'tracks multiple targets' do
+      tracker = TeAro::ActiveRecordObjectTracker.new([User, Post])
 
-    expect(tracker.results[:updated]).to contain_exactly(user)
-  end
+      tracker.start
+      user = User.new(name: 'foo', age: 31)
+      post = Post.new(content: 'some text', user: user)
+      tracker.stop
 
-  it "tracks detailed object updates made within tracking window" do
-    tracker = TeAro::ActiveRecordObjectTracker.new
-    user = User.first
-    tracker.start
-    user.update(age: 33)
-    tracker.stop
+      maybe_log(tracker)
 
-    maybe_log(tracker)
-
-    expect(tracker.results[:object_updates].first).to include(user)
-  end
-
-  it "tracks deleted objects" do
-    tracker = TeAro::ActiveRecordObjectTracker.new
-    tracker.start
-    # user = User.create(name: 'foo', age: 31)
-    user = User.last
-    user.destroy
-    tracker.stop
-
-    maybe_log(tracker)
-
-    expect(tracker.results[:deleted]).to contain_exactly user
-  end
-
-  it "only tracks given targets" do
-    tracker = TeAro::ActiveRecordObjectTracker.new([User])
-
-    tracker.start
-    user = User.new(name: 'foo', age: 31)
-    post = Post.new(content: 'some text', user: user)
-    tracker.stop
-
-    maybe_log(tracker)
-
-    expect(tracker.results[:new]).to contain_exactly(user)
-  end
-
-  it "tracks multiple targets" do
-    tracker = TeAro::ActiveRecordObjectTracker.new([User, Post])
-
-    tracker.start
-    user = User.new(name: 'foo', age: 31)
-    post = Post.new(content: 'some text', user: user)
-    tracker.stop
-
-    maybe_log(tracker)
-
-    expect(tracker.results[:new]).to contain_exactly(user, post)
+      expect(tracker.results[:new]).to contain_exactly(user, post)
+    end
   end
 end

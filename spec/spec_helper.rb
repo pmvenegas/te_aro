@@ -1,11 +1,8 @@
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
-# Standalone ActiveRecord config for specs
-require 'active_record'
-ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: 'test.db')
-
 require 'te_aro'
+require 'active_record'
+require 'support/setup_database'
 
-require 'setup_database'
-
-require 'models'
+# Standalone ActiveRecord config for specs
+ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: 'test.db')
