@@ -1,33 +1,40 @@
-require "te_aro/version"
-require "te_aro/object_tracker"
-require "te_aro/action_tracer"
+require 'te_aro/version'
+require 'te_aro/active_record_object_tracker'
+require 'te_aro/active_record_action_tracer'
+require 'active_record'
 
 module TeAro
   class Observer
+    DEFAULT_TARGETS = [ActiveRecord::Base]
+
     attr_accessor :object_tracker, :action_tracer
+
     def initialize(options = {})
       @options = options
       @logger = @options.fetch(:logger, nil) || create_logger
-      @object_tracker = ObjectTracker.new(@logger) if tracker?
-      @action_tracer = ActionTracer.for_active_record(@logger) if tracer?
+      targets = @options.fetch(:targets, DEFAULT_TARGETS)
+
+      @object_tracker = ActiveRecordObjectTracker.new(targets) if tracker?
+      @action_tracer = ActiveRecordActionTracer.new(targets) if tracer?
     end
 
     def observe(&block)
-      @object_tracker.before if tracker?
+      @object_tracker.start if tracker?
       @action_tracer.start if tracer?
 
       block.call
 
       if tracer?
         @action_tracer.stop
-        @action_tracer.print_trace
-        @action_tracer.print_changes
+        @action_tracer.log_results(@logger)
       end
 
       if tracker?
-        @object_tracker.after
-        @object_tracker.print_changes
+        @object_tracker.stop
+        @object_tracker.log_results(@logger)
       end
+
+      self
     end
 
     private
@@ -52,6 +59,11 @@ end
 
 module Kernel
   def aro(&block)
-    TeAro::Observer.new.observe { block.call }
+    quiet_logger = Logger.new(STDOUT)
+    quiet_logger.formatter = proc do |severity, datetime, progname, msg|
+      "#{msg}\n"
+    end
+
+    TeAro::Observer.new(logger: quiet_logger).observe { block.call }
   end
 end
