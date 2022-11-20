@@ -1,6 +1,6 @@
 require "te_aro/version"
 require "te_aro/object_tracker"
-require "te_aro/action_trace"
+require "te_aro/action_tracer"
 
 module TeAro
   class Observer
@@ -9,7 +9,7 @@ module TeAro
       @options = options
       @logger = @options.fetch(:logger, nil) || create_logger
       @object_tracker = ObjectTracker.new(@logger) if tracker?
-      @action_tracer = ActionTrace.for_active_record(@logger) if tracer?
+      @action_tracer = ActionTracer.for_active_record(@logger) if tracer?
     end
 
     def observe(&block)

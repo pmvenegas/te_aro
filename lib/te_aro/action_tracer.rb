@@ -1,5 +1,5 @@
 module TeAro
-  class ActionTrace
+  class ActionTracer
     attr_reader :accumulator, :calls
 
     def initialize(logger)
