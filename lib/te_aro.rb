@@ -18,13 +18,16 @@ module TeAro
 
       block.call
 
-      @action_tracer.stop if tracer?
-      @object_tracker.after if tracker?
+      if tracer?
+        @action_tracer.stop
+        @action_tracer.print_trace
+        @action_tracer.print_changes
+      end
 
-      @action_tracer.print_trace if tracer?
-      @action_tracer.print_changes if tracer?
-
-      @object_tracker.print_changes if tracker?
+      if tracker?
+        @object_tracker.after
+        @object_tracker.print_changes
+      end
     end
 
     private
