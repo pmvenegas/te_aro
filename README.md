@@ -25,7 +25,7 @@ Or install it yourself as:
 TeAro::Observer.new.observe { @some_ar_object.do_something_that_triggers_callbacks }
 
 # With the tracer enabled (slow):
-TeAro::Observer.new(:tracer => true).observe { @some_ar_object.do_something_that_triggers_callbacks }
+TeAro::Observer.new(tracer: true).observe { @some_ar_object.do_something_that_triggers_callbacks }
 
 # Can also use the Kernel#aro method to call with defaults:
 aro { @some_ar_object.do_something }
@@ -115,7 +115,7 @@ By default, output is logged to `log/te_aro.log`. This can be changed by passing
 
 Eg to log to STDOUT:
 ```ruby
-TeAro::Observer.new(:logger => Logger.new(STDOUT)).observe { some_ar_object.do_something }
+TeAro::Observer.new(logger: Logger.new(STDOUT)).observe { some_ar_object.do_something }
 ```
 
 
