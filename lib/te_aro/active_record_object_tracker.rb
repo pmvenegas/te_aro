@@ -1,6 +1,6 @@
 module TeAro
   class ActiveRecordObjectTracker
-    attr_accessor :targets, :results
+    attr_reader :targets, :results
 
     def initialize(targets=TeAro::Observer::DEFAULT_TARGETS)
       @targets = targets
@@ -11,16 +11,16 @@ module TeAro
     end
 
     def start
-      raise(StandardError, '#start has already been called') if @start_called
+      raise(RuntimeError, '#start has already been called') if @start_called
 
-      @marshalled_objects_before = current_objects.map { |o| marshal(o) }
+      @marshaled_objects_before = current_objects.map { |o| marshal(o) }
       @start_called = true
       @started_at = DateTime.now
     end
 
     def stop
-      raise(StandardError, '#start must be called before #stop') unless @start_called
-      raise(StandardError, '#stop has already been called') if @stop_called
+      raise(RuntimeError, '#start must be called before #stop') unless @start_called
+      raise(RuntimeError, '#stop has already been called') if @stop_called
 
       @objects_after = current_objects
       @stop_called = true
@@ -29,14 +29,19 @@ module TeAro
     end
 
     def log_results(logger)
-      raise(StandardError, '#start and #stop must be called to obtain results') unless @stop_called
+      raise(RuntimeError, '#start and #stop must be called to obtain results') unless @stop_called
 
       change_counts = @results[:change_counts]
 
-      logger.info('Observed objects:') if !change_counts.empty?
-      change_counts.each do |class_name, delta|
-        next if delta == 0
-        logger.info("\t#{class_name}: #{'+' if delta > 0}#{delta}")
+      logger.info('Observed objects:')
+
+      if change_counts.empty?
+        logger.info("\t(No changes)")
+      else
+        change_counts.each do |class_name, delta|
+          next if delta == 0
+          logger.info("\t#{class_name}: #{delta}")
+        end
       end
 
       new_objects = @results[:new]
@@ -128,7 +133,7 @@ module TeAro
     end
 
     def record_changes
-      @objects_before = @marshalled_objects_before.map { |o| unmarshal(o) }
+      @objects_before = @marshaled_objects_before.map { |o| unmarshal(o) }
       before_count = object_counts_by_class(@objects_before)
       after_count = object_counts_by_class(@objects_after)
       change_counts = object_count_delta(before_count, after_count).reject {|class_name, delta| delta == 0 }
@@ -150,8 +155,6 @@ module TeAro
           ar_equal?(a, b)
         end
       end
-
-      # byebug
 
       final_objects.each do |object|
         if object.destroyed?
