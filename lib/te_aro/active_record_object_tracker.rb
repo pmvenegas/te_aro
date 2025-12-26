@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 module TeAro
   class ActiveRecordObjectTracker
-    attr_accessor :targets, :results
+    attr_reader :targets, :results
 
-    def initialize(targets=TeAro::Observer::DEFAULT_TARGETS)
+    def initialize(targets = TeAro::Observer::DEFAULT_TARGETS)
       @targets = targets
       @start_called = false
       @stop_called = false
@@ -11,16 +13,16 @@ module TeAro
     end
 
     def start
-      raise(StandardError, '#start has already been called') if @start_called
+      raise('#start has already been called') if @start_called
 
-      @marshalled_objects_before = current_objects.map { |o| marshal(o) }
+      @marshaled_objects_before = current_objects.map { |o| marshal(o) }
       @start_called = true
       @started_at = DateTime.now
     end
 
     def stop
-      raise(StandardError, '#start must be called before #stop') unless @start_called
-      raise(StandardError, '#stop has already been called') if @stop_called
+      raise('#start must be called before #stop') unless @start_called
+      raise('#stop has already been called') if @stop_called
 
       @objects_after = current_objects
       @stop_called = true
@@ -29,14 +31,21 @@ module TeAro
     end
 
     def log_results(logger)
-      raise(StandardError, '#start and #stop must be called to obtain results') unless @stop_called
+      raise('#start and #stop must be called to obtain results') unless @stop_called
 
       change_counts = @results[:change_counts]
 
-      logger.info('Observed objects:') if !change_counts.empty?
+      logger.info('Observed objects:')
+
+      if change_counts.empty?
+        logger.info("\t(No changes)")
+        return
+      end
+
       change_counts.each do |class_name, delta|
-        next if delta == 0
-        logger.info("\t#{class_name}: #{'+' if delta > 0}#{delta}")
+        next if delta.zero?
+
+        logger.info("\t#{class_name}: #{delta}")
       end
 
       new_objects = @results[:new]
@@ -46,19 +55,19 @@ module TeAro
       updated_objects = @results[:updated]
       deleted_objects = @results[:deleted]
 
-      logger.info('New objects:') if !new_objects.empty?
+      logger.info('New objects:') unless new_objects.empty?
       new_objects.each do |object|
         log_object_id(logger, object)
         log_object_attributes(logger, object)
       end
 
-      logger.info('Created objects:') if !created_objects.empty?
+      logger.info('Created objects:') unless created_objects.empty?
       created_objects.each do |object|
         log_object_id(logger, object)
         log_object_attributes(logger, object)
       end
 
-      logger.info('Objects with unsaved changes:') if !changed_objects.empty?
+      logger.info('Objects with unsaved changes:') unless changed_objects.empty?
       changed_objects.each do |object|
         log_object_id(logger, object)
         object.changes.each do |var_name, (old_value, new_value)|
@@ -73,7 +82,9 @@ module TeAro
           log_object_id(logger, old)
           old.attributes.each do |attr_name, old_value|
             new_value = new[attr_name]
-            logger.info("\t\t#{attr_name}: #{value_or_nil(old_value)} -> #{value_or_nil(new_value)}") if !attr_equal?(old_value, new_value)
+            logger.info("\t\t#{attr_name}: #{value_or_nil(old_value)} -> #{value_or_nil(new_value)}") unless attr_equal?(
+              old_value, new_value
+            )
           end
         end
 
@@ -82,7 +93,7 @@ module TeAro
         end
       end
 
-      logger.info('Deleted objects:') if !deleted_objects.empty?
+      logger.info('Deleted objects:') unless deleted_objects.empty?
       deleted_objects.each do |object|
         log_object_id(logger, object)
       end
@@ -97,7 +108,7 @@ module TeAro
     end
 
     def log_object_attributes(logger, object)
-      object.attributes.reject { |k, v| v.nil? }.each do |k, v|
+      object.attributes.reject { |_k, v| v.nil? }.each do |k, v|
         logger.info("\t\t#{k}: #{value_or_nil(v)}")
       end
     end
@@ -120,18 +131,18 @@ module TeAro
     end
 
     def ar_equal?(a, b)
-      a.class == b.class && a.attributes.all? { |k, v| attr_equal?(v, b[k]) }
+      a.instance_of?(b.class) && a.attributes.all? { |k, v| attr_equal?(v, b[k]) }
     end
 
     def same_record?(a, b)
-      a.class == b.class && a.id == b.id
+      a.instance_of?(b.class) && a.id == b.id
     end
 
     def record_changes
-      @objects_before = @marshalled_objects_before.map { |o| unmarshal(o) }
+      @objects_before = @marshaled_objects_before.map { |o| unmarshal(o) }
       before_count = object_counts_by_class(@objects_before)
       after_count = object_counts_by_class(@objects_after)
-      change_counts = object_count_delta(before_count, after_count).reject {|class_name, delta| delta == 0 }
+      change_counts = object_count_delta(before_count, after_count).reject { |_class_name, delta| delta.zero? }
 
       @results[:objects_before] = @objects_before
       @results[:objects_after] = @objects_after
@@ -151,8 +162,6 @@ module TeAro
         end
       end
 
-      # byebug
-
       final_objects.each do |object|
         if object.destroyed?
           deleted_objects << object
@@ -168,16 +177,12 @@ module TeAro
           if original
             # If persisted object was already known at the start of
             # tracking, we can report details of changes made to it
-            if !ar_equal?(original, object)
-              object_updates << [original, object]
-            end
-          else
+            object_updates << [original, object] unless ar_equal?(original, object)
+          elsif object.respond_to?(:created_at) && object.created_at > @started_at
             # Otherwise, report creation/update
-            if object.created_at > @started_at
-              created_objects << object
-            elsif object.updated_at > @started_at
-              updated_objects << object
-            end
+            created_objects << object
+          elsif object.respond_to?(:updated_at) && object.updated_at > @started_at
+            updated_objects << object
           end
         end
       end
@@ -205,11 +210,11 @@ module TeAro
 
     def object_count_delta(before, after)
       deltas = {}
-      after.keys.each do |k|
+      after.each_key do |k|
         deltas[k] = after[k] - (before[k] || 0)
       end
-      before.keys.each do |k|
-        deltas[k] = -before[k] if !deltas.include?(k)
+      before.each_key do |k|
+        deltas[k] = -before[k] unless deltas.include?(k)
       end
       deltas
     end
@@ -219,7 +224,7 @@ module TeAro
     end
 
     def marshal(object)
-      Marshal.dump({klass: object.class, attributes: object.attributes})
+      Marshal.dump({ klass: object.class, attributes: object.attributes })
     end
 
     def unmarshal(string)

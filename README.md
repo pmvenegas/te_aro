@@ -1,22 +1,22 @@
 # Te Aro ActiveRecordObserver
 
-Designed to help with understanding how a particular block of code changes your `ActiveRecord` objects. See what gets changed, what type of objects are created, and what the values on those objects are. It can also display the sequence of callbacks that was triggered.
+This tool is intended to help understand how a particular block of code changes `ActiveRecord` objects and/or database records. It allows you to see what objects and fields are created and changed, and which database changes are persisted.
+
+Note that this assumes standard `created_at` and `updated_at` fields are present.
 
 ## Installation
+
+_NB: This is for including the tool as a local gem for now, as it has not yet been published._
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'te_aro'
+gem 'te_aro', path: 'path/to/te_aro'
 ```
 
 And then execute:
 
     $ bundle
-
-Or install it yourself as:
-
-    $ gem install te_aro
 
 ## Usage
 
@@ -24,16 +24,13 @@ Or install it yourself as:
 # With defaults:
 TeAro::Observer.new.observe { @some_ar_object.do_something_that_triggers_callbacks }
 
-# With the tracer enabled (slow):
-TeAro::Observer.new(tracer: true).observe { @some_ar_object.do_something_that_triggers_callbacks }
-
 # Can also use the Kernel#aro method to call with defaults:
 aro { @some_ar_object.do_something }
 ```
 
 ## Sample Session
 
-Te Aro in action on gitlab code:
+Te Aro in action on GitLab code:
 
 ```ruby
 # gitlab-development-kit/gitlab/spec/services/merge_requests/create_service_spec.rb
@@ -125,9 +122,8 @@ Options are passed as a hash to `Observer.new`.
 
 The following options are available:
 
-* `:tracer` Show the ActiveRecord callbacks that were called. A truthy value will turn this on, it is off by default
-* `:tracker` Show ActiveRecord objects that have been created or changed. A falsey value will turn this off. On by default.
-* `:logger` Sets the logger used to record output.
+* `:targets` Sets a whitelist of specific `ActiveRecord` subclasses to observe. Defaults to `ActiveRecord`, i.e. all subclasses.
+* `:logger` Sets a custom logger to record output.
 
 ## Development
 
@@ -137,7 +133,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/powershop/te_aro.
+Bug reports and pull requests are welcome on GitHub at https://github.com/pmvenegas/te_aro.
 
 ## License
 

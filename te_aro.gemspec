@@ -1,5 +1,6 @@
-# coding: utf-8
-lib = File.expand_path('../lib', __FILE__)
+# frozen_string_literal: true
+
+lib = File.expand_path('lib', __dir__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'te_aro/version'
 
@@ -9,8 +10,8 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Michael Fowler', 'Paolo Veñegas', 'aj esler']
   spec.email         = ['michael.fowler@powershop.co.nz', 'pvenegas@gmail.com', 'aj@powershop.co.nz']
 
-  spec.summary       = %q{Observe ActiveRecord runtime behaviour}
-  spec.description   = %q{See which objects have changed, what new objects were created, and which callbacks were triggered}
+  spec.summary       = 'ActiveRecord observer'
+  spec.description   = 'This tool monitors ActiveRecord changes'
   spec.homepage      = 'https://github.com/pmvenegas/te_aro'
   spec.license       = 'MIT'
 
@@ -19,10 +20,10 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
+  spec.add_development_dependency 'activerecord'
+  spec.add_development_dependency 'bundler'
   spec.add_development_dependency 'byebug'
-  spec.add_development_dependency 'activerecord' # TODO: specify version
-  spec.add_development_dependency 'sqlite3', '~> 1.3'
-  spec.add_development_dependency 'bundler', '~> 2'
-  spec.add_development_dependency 'rake', '~> 10.0'
-  spec.add_development_dependency 'rspec', '~> 0'
+  spec.add_development_dependency 'rake'
+  spec.add_development_dependency 'rspec'
+  spec.add_development_dependency 'sqlite3'
 end
