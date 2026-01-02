@@ -34,19 +34,17 @@ module TeAro
     def log_results(logger)
       raise('#start and #stop must be called to obtain results') unless @stop_called
 
+      logger.info('Object counts:')
+
       change_counts = @results[:change_counts]
-
-      logger.info('Observed objects:')
-
       if change_counts.empty?
-        logger.info("\t(No changes)")
-        return
-      end
+        logger.info("\tNo change")
+      else
+        change_counts.each do |class_name, delta|
+          next if delta.zero?
 
-      change_counts.each do |class_name, delta|
-        next if delta.zero?
-
-        logger.info("\t#{class_name}: #{delta}")
+          logger.info("\t#{class_name}: #{delta}")
+        end
       end
 
       new_objects = @results[:new]
