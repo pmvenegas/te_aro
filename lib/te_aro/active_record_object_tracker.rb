@@ -17,7 +17,8 @@ module TeAro
 
       @marshaled_objects_before = current_objects.map { |o| marshal(o) }
       @start_called = true
-      @started_at = DateTime.now
+      # Use Time.now to be consistent with AR Time objects and to avoid mixing DateTime
+      @started_at = Time.now
     end
 
     def stop
@@ -82,9 +83,7 @@ module TeAro
           log_object_id(logger, old)
           old.attributes.each do |attr_name, old_value|
             new_value = new[attr_name]
-            logger.info("\t\t#{attr_name}: #{value_or_nil(old_value)} -> #{value_or_nil(new_value)}") unless attr_equal?(
-              old_value, new_value
-            )
+            logger.info("\t\t#{attr_name}: #{value_or_nil(old_value)} -> #{value_or_nil(new_value)}") unless attr_equal?(old_value, new_value)
           end
         end
 
@@ -217,10 +216,6 @@ module TeAro
         deltas[k] = -before[k] unless deltas.include?(k)
       end
       deltas
-    end
-
-    def ar_to_hash(object)
-      object.as_json.merge('class_name' => object.class.to_s)
     end
 
     def marshal(object)
