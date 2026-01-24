@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'active_record'
+require 'fileutils'
+require 'logger'
 
 module TeAro
   class Observer
@@ -16,11 +18,28 @@ module TeAro
       @object_tracker = ActiveRecordObjectTracker.new(targets)
     end
 
+    # Run the provided block while observing ActiveRecord objects.
+    # Guarantees that the tracker is stopped and results are logged even when
+    # the block raises. The original exception (if any) will propagate.
     def observe(&block)
       @object_tracker.start
-      block.call
-      @object_tracker.stop
-      @object_tracker.log_results(@logger)
+      begin
+        yield
+      ensure
+        # Ensure we always attempt to stop the tracker and log results.
+        # Rescue errors during stop/logging so we don't hide the original exception.
+        begin
+          @object_tracker.stop
+        rescue StandardError
+          # intentionally suppressed to avoid masking original errors
+        end
+
+        begin
+          @object_tracker.log_results(@logger)
+        rescue StandardError
+          # intentionally suppressed
+        end
+      end
 
       self
     end
@@ -28,7 +47,11 @@ module TeAro
     private
 
     def create_logger
-      logger = Logger.new('log/te_aro.log')
+      log_path = 'log/te_aro.log'
+      dir = File.dirname(log_path)
+      FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+
+      logger = Logger.new(log_path)
       logger.formatter = proc do |_severity, _datetime, _progname, msg|
         "#{msg}\n"
       end
